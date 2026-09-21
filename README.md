@@ -1,7 +1,7 @@
 # 🕷️ Trawl - Motor Scraping Adaptativo Autohospedado
 
-[![GitHub](https://img.shields.io/badge/GitHub-germondai%2Ftrawl-blue?logo=github)](https://github.com/germondai/trawl)
-[![Docker](https://img.shields.io/badge/Docker-ghcr.io%2Fgermondai%2Ftrawl-blue?logo=docker)](https://github.com/germondai/trawl/pkgs/container/trawl)
+[![GitHub](https://img.shields.io/badge/GitHub-germondai%2Ftrawl-181717?logo=github)](https://github.com/germondai/trawl)
+[![Docker](https://img.shields.io/badge/Docker-ghcr.io%2Fgermondai%2Ftrawl-2496ED?logo=docker)](https://github.com/germondai/trawl/pkgs/container/trawl)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ## 📋 Descripción general
@@ -12,25 +12,26 @@
 - **Captchas automáticos**: Turnstile, reCAPTCHA v2/v3, hCaptcha, GeeTest, Imperva (experimental)
 - **Caching agresivo Redis**: Sub-500ms en requests repetidos por dominio
 - **Estrategia adaptativa de 5 tiers**: fetch → CF cached → CF fresh → Browser context → Custom headers
-- **FlareSolverr compatible**: API compatible en `http://trawl:8191`
+- **FlareSolverr compatible**: URL `http://trawl:8191` funciona directo en Prowlarr/Jackett
 - **Dos builds hardware**: `:latest` (AVX2 moderno) y `:baseline` (kernel 4.4+, Synology compatible)
 - **Multiarch**: amd64, arm64 (Raspberry Pi, Synology, x86 server)
-- **Bun runtime**: Alto rendimiento, boot 15-30s (warmup pool), subsecuentes instantáneos
+- **Bun runtime**: Alto rendimiento, bajo consumo
+- **MIT Open Source**: Activamente mantenido
 
 ## ✨ Características principales
 
-- 🛡️ **Bypass nativo Cloudflare** — Resuelve challenges en 4-15 seg sin APIs externas, cero cuotas
-- 🤖 **Captchas automáticos** — Turnstile, reCAPTCHA v2/v3, hCaptcha, GeeTest, Imperva (experimental) integrados
-- ⚡ **Caching agresivo Redis** — Sub-500ms repeats, persistencia por dominio, session pooling
-- 🧠 **Estrategia adaptativa 5 tiers** — Fetch simple → Cloudflare cached → Cloudflare fresh → Browser context → Custom headers
+- 🛡️ **Bypass nativo Cloudflare** — Resuelve challenges en 4-15 seg sin APIs externas ni cuotas
+- 🤖 **Captchas automáticos** — Turnstile, reCAPTCHA v2/v3, hCaptcha, GeeTest, Imperva (experimental)
+- ⚡ **Caching agresivo Redis** — Sub-500ms repeats, session pooling por dominio, persistencia
+- 🧠 **Estrategia adaptativa 5 tiers** — Fetch simple → CF cached → CF fresh (managed-mode) → Browser context (captchas) → Custom headers
 - 🔄 **FlareSolverr compatible** — Drop-in replacement Prowlarr, Jackett, Sonarr, Radarr (*arr stack)
 - 📡 **API REST simple** — v1 (metadata enriquecida: tier, timings, sessionCached, cookies) + endpoint `/scrape`
 - 🏷️ **Dos builds hardware** — `:latest` (AVX2 moderno) + `:baseline` (kernel 4.4+, Synology compatible)
-- 🌐 **Browser pool + warmup** — Boot 15-30s, pooled browsers reutilizables, warmpool Redis
-- 📦 **Multiarch Docker** — amd64, arm64 (Raspberry Pi, Synology, x86 server compatible)
+- 🌐 **Browser pool + warmup** — Boot 15-30s inicial, subsecuentes rápidos, browsers pooled reutilizables
+- 🏗️ **Multiarch Docker** — amd64, arm64 (Raspberry Pi, Synology, x86 server compatible)
 - 📊 **Logging + métricas debug** — Verbose logs, timing data, tier utilizado visible
 - 🐳 **Docker Compose simple** — Scraper + Redis included, `.env` config, un comando `up`
-- 📄 **MIT open source** — Código abierto, activamente mantenido, comunidad GitHub
+- 📄 **MIT Open Source** — Código abierto, activamente mantenido, comunidad GitHub
 
 ## 📋 Requisitos del sistema
 
@@ -93,7 +94,6 @@ volumes:
   trawl_cache:
   redis_data:
 EOF
-
 docker compose up -d
 ```
 
@@ -131,17 +131,14 @@ volumes:
   trawl_cache:
   redis_data:
 EOF
-
 docker compose up -d
 ```
 
 ### Acceder (API disponible)
 
-| Endpoint | Descripción |
-|----------|-------------|
-| `http://localhost:8191/health` | Health check |
-| `http://localhost:8191/v1` | API v1 completa (metadata enriquecida) |
-| `http://localhost:8191/scrape` | Endpoint simple compatible FlareSolverr |
+```
+http://localhost:8191/health   # Health check
+```
 
 ### Primer test (scraping simple)
 
@@ -154,20 +151,14 @@ curl -X POST http://localhost:8191/v1 \
 
 ## ⚙️ Configuración
 
-1. **Variables de entorno principales** (en `.env` o `docker-compose.yml`):
-   - `TRAWL_PORT` — Puerto API (default: 8191)
-   - `REDIS_URL` — Conexión Redis (default: `redis://redis:6379`)
-   - `LOG_LEVEL` — Nivel logging: `debug`, `info`, `warn`, `error` (default: `info`)
-
-2. **Configuración avanzada** (opcional en `.env`):
-   - `BROWSER_POOL_SIZE` — Tamaño pool browsers (default: 5)
-   - `SESSION_CACHE_TTL` — TTL cache sesiones segundos (default: 3600)
-
-3. **Docker Secrets** — Soporte nativo para secrets sensibles
-
-4. **Health checks** — Integrados en container (verifica `/health`)
-
-5. **Volúmenes persistentes** — `trawl_cache` (browser temp) + `redis_data` (cache persistente)
+1. **Puerto API** — `TRAWL_PORT=8191` (variable de entorno)
+2. **Redis URL** — `REDIS_URL=redis://redis:6379` (contenedor local por defecto)
+3. **Log level** — `LOG_LEVEL=info` (opciones: debug, info, warn, error)
+4. **Browser pool size** — `BROWSER_POOL_SIZE=5` (número de browsers concurrentes)
+5. **Session cache TTL** — `SESSION_CACHE_TTL=3600` (segundos, 1 hora por defecto)
+6. **Variables via .env** — Copia `.env.example` a `.env` y ajusta valores
+7. **Docker secrets** — Soporte nativo para secrets sensibles
+8. **Health checks** — Integrados en container (`/health` endpoint)
 
 ## 🚀 Primeros pasos
 
@@ -237,18 +228,17 @@ curl -X POST http://localhost:8191/v1 \
 
 ## 💡 Casos de uso
 
-- 🎬 **\*arr stack (Prowlarr, Jackett, Sonarr, Radarr)**: Bypass Cloudflare nativo, reemplaza FlareSolverr, cero cuotas
-- 🕸️ **Web scraping automatizado**: Sitios con Cloudflare, datos públicos, automatización inteligente
-- 📊 **Data collection**: APIs bloqueadas por CF, scraping escalable, caching eficiente
-- 🔀 **Reverse proxy scraping**: Integrable en cualquier stack web, API REST simple
-- 🧪 **Testing web apps**: Simula interacción usuario, resuelve captchas automático, QA automation
+- 🎬 **Stack *arr (Prowlarr, Jackett, Sonarr, Radarr)** — Bypass Cloudflare nativo, reemplaza FlareSolverr, cero cuotas
+- 🕸️ **Web scraping automatizado** — Sitios con Cloudflare, datos públicos, automatización inteligente
+- 📊 **Data collection** — APIs bloqueadas por CF, scraping escalable, caching eficiente
+- 🔄 **Reverse proxy scraping** — Integrable en cualquier stack web, API REST simple
+- 🧪 **Testing web apps** — Simula interacción usuario, resuelve captchas automático, QA automation
 
 ## 🔒 Acceso remoto seguro
 
 ### HTTPS con Caddy (exponer scraper remoto seguro)
 
-```bash
-# Caddyfile
+```caddyfile
 trawl.tudominio.com {
     reverse_proxy localhost:8191
     # Opcional: proteger con basic auth
@@ -317,4 +307,4 @@ MIT License — Código abierto, activamente mantenido. Ver [LICENSE](LICENSE) p
 
 ---
 
-> 📖 **Post original**: [Cómo instalar Trawl en Docker - Motor scraping adaptativo que bypasa Cloudflare autohospedado](https://genbyte.blogspot.com/2026/07/como-instalar-trawl-en-docker-motor.html)
+> 📖 **Basado en el post**: [Cómo instalar Trawl en Docker - Motor scraping adaptativo que bypasa Cloudflare autohospedado](https://genbyte.blogspot.com/2026/07/como-instalar-trawl-en-docker-motor.html)
